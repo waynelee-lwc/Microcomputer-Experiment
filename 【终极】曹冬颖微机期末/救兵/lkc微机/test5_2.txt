@@ -1,0 +1,188 @@
+
+CODE SEGMENT
+    ASSUME  CS:CODE
+ 
+START:
+
+	MOV AX,0000H
+	MOV DS,AX
+	;设置中断向量
+	MOV AX,OFFSET MIR6
+	MOV SI,0038H
+	MOV [SI],AX
+	
+	INC SI
+	INC SI
+	MOV AX,CS
+	MOV [SI],AX
+	
+	
+	CLI
+	MOV AL,11H    
+    OUT 20H, AL    ;命令字ICW1，11H=00010001B
+    MOV AL, 08H
+    OUT 21H, AL    ;命令字ICW2，08H=00001000B
+    MOV AL, 04H
+    OUT 21H, AL    ;命令字ICW3，04H=00000100B
+    MOV AL, 01H
+    OUT 21H, AL    ;命令字ICW4，01H=00000001B
+    MOV AL, 2FH    ;OCW1
+    OUT 21H, AL 
+    STI
+    MOV BL,00H	;记录波的类型
+    
+AA1:
+   ; MOV CX,04H
+    CMP BL,00H
+    JZ  JUCHIL
+    CMP BL,01H
+    JZ JUXINGL
+    CMP BL,02H
+    JZ SANJIAOL
+    CMP BL,03H
+    JZ S1
+    JMP AA1
+    
+S1:JMP JIETIL
+S2:JMP JIETIL
+
+ 
+JUCHIL:
+    CMP BL,01H
+    JZ JUXINGL
+    CMP BL,02H
+    JZ SANJIAOL
+    CMP BL,03H
+    JZ S2;
+  	
+   ; MOV CX, ZQ       ;产生锯齿波的周期数为7次，如果想改变锯齿波产生周期请修改这里
+JUCHI:
+    MOV DX, 0600H     ;DAC0832接IOY0,0600H为控制端口地址
+    MOV AL, 00H       ;AL为数字量
+JC1: 
+    OUT DX, AL        ;转换为模拟量
+    CALL DELAY1 
+   ; CALL DELAY1 
+   ; CALL DELAY1       ;延时，此为短延时
+    CMP AL ,0FFH
+    JE JC2
+    INC AL            ;AL步加1，直到等于0FFH
+    JMP JC1
+JC2:
+    LOOP JUCHIL
+    JMP AA1
+ 
+ JUXINGL:;产生矩形波
+   CMP BL,00H
+    JZ  JUCHIL
+    CMP BL,02H
+    JZ SANJIAOL
+    CMP BL,03H
+    JZ JIETIL;
+
+ ; MOV CX, 02H       ;产生矩形波的周期数为5次，如果想改变三角波产生周期请修改这里
+JUXING:
+    MOV DX, 0600H
+    MOV AL, 00H       ;先输出00H的波形
+    OUT DX, AL
+    CALL DELAY2   
+    ;CALL DELAY2
+   ; CALL DELAY2    ;长延时
+    MOV AL, 0FFH      ;再输出0FFH的波形
+    OUT DX, AL
+    CALL DELAY2 
+    ;CALL DELAY2
+    ;CALL DELAY2      ;长延时
+    LOOP JUXINGL
+     JMP AA1
+SANJIAOL:    ;产生三角波
+    CMP BL,00H
+    JZ  JUCHIL
+    CMP BL,01H
+    JZ JUXINGL
+    CMP BL,03H
+    JZ JIETIL;
+
+   ; MOV CX, 02H     ;产生三角波的周期数为5次，如果想改变三角波产生周期请修改这里
+SANJIAO:
+SJ1:
+    MOV DX, 0600H
+    OUT DX, AL
+    CALL DELAY1      
+    CMP AL, 0FFH
+    JE SJ2           
+    INC AL           
+    JMP SJ1
+SJ2:
+    MOV DX, 0600H
+    OUT DX, AL
+    CALL DELAY1      
+    CMP AL, 00H
+    JE SJ3
+    DEC AL        
+    JMP SJ2
+SJ3:
+    LOOP SANJIAOL
+  JMP AA1
+ 
+JIETIL:   ;产生阶梯波
+    
+    MOV AX,0000H
+         ;BH置0
+JIETI:
+   CMP BL,00H
+    
+    JZ S3
+    CMP BL,01H
+    JZ JUXINGL
+    CMP BL,02H
+    JZ SANJIAOL     ;AX初始化0000H
+JT1:
+    MOV DX, 0600H
+    OUT DX,AL
+	CALL DELAY2
+	ADD AL,040H
+	CMP AL,0FFH
+	JZ JIETIL      ;用当前解体高度加上每个阶梯的高度得到下一阶梯的高度
+    JMP JIETI
+S3:JMP JUCHIL 
+
+
+
+MIR6:
+   STI
+   INC BL
+   CMP BL,04H
+   JNE AA8
+    
+AA7:MOV BL,00H
+AA8: 
+   PUSH AX
+   MOV AL,20H
+   OUT 20H,AL
+   POP AX
+   IRET
+   
+ 
+DELAY1:                ;短延时
+    PUSH CX
+    MOV CX, 0FFH
+D1: 
+    PUSH AX
+    POP AX
+    LOOP D1
+    POP CX
+    RET
+ 
+DELAY2:               ;长延时
+    PUSH CX
+    MOV CX, 08FFFH
+D2: 
+    PUSH AX
+    POP AX
+    LOOP D2
+    POP CX
+    RET
+ 
+CODE ENDS
+    END START

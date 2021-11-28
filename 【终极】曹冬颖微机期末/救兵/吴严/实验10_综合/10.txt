@@ -1,0 +1,406 @@
+1. 实验目的
+
+本次试验利用8254,8255芯片，由8254产生1s方波接入中断，以此实现精确计时。8255芯片负责数码管显示及键盘扫描。
+2. 已知BUG
+
+设置计数初值时如果为XX00则会出现(XX-1)99的现象，应为(xx-1)59,只要后两位不是00则无此bug。
+设置计数初值时没有对输入的数进行限制，可以输入9999这种初值，然而按理说最大应该是5959。
+上述bug比较好改，然而老师都算我过了，我就不改了，希望各位改掉bug后留言，我将换上改好的代码。
+
+MY8255_A EQU 0600H 
+MY8255_B EQU 0602H 
+MY8255_C EQU 0604H 
+MY8255_MODE EQU 0606H 
+A8254 EQU 06C0H 
+B8254 EQU 06C2H
+C8254 EQU 06C4H
+CON8254 EQU 06C6H
+ 
+SSTACK SEGMENT STACK 
+    DW 32 DUP(?)
+SSTACK ENDS
+ 
+PUBLIC SEC
+PUBLIC MIN
+PUBLIC STT
+PUBLIC TEMPP
+ 
+DATA SEGMENT 
+    DTABLE DB 3FH,06H,5BH,4FH,66H,6DH,7DH,07H,7FH,6FH 
+    MSEC DW 0
+    SEC DB 05H
+    MIN DB 00H
+    STT DB 01H
+    TEMPP DB,00H
+DATA ENDS
+ 
+CODE SEGMENT 
+    ASSUME CS:CODE,DS:DATA,SS:SSTACK
+START: 
+    PUSH DS
+    MOV AX, 0000H
+    MOV DS, AX
+    MOV AX, OFFSET MIR7          ;取中断入口地址
+    MOV SI, 003CH                ;中断矢量地址
+    MOV [SI], AX                 ;填IRQ7的偏移矢量确定地址
+    MOV AX, CS                   ;段地址
+    MOV SI, 003EH
+    MOV [SI], AX                 ;填IRQ7的段地址矢量
+    CLI
+    POP DS            
+    ;初始化主片8255
+    MOV DX,MY8255_MODE
+    MOV AL,81H
+    OUT DX,AL    
+    ;初始化主片8254
+    MOV DX,CON8254
+    MOV AL,36H 
+    OUT DX,AL
+    MOV DX,A8254 
+    MOV AL,0E8H
+    OUT DX,AL
+    MOV AL,03H
+    OUT DX,AL     
+    ;初始化主片8259
+    MOV AL, 11H
+    OUT 20H, AL                  ;ICW1
+    MOV AL, 08H
+    OUT 21H, AL                  ;ICW2
+    MOV AL, 04H
+    OUT 21H, AL                  ;ICW3
+    MOV AL, 01H
+    OUT 21H, AL                  ;ICW4
+    MOV AL, 6FH        
+    OUT 21H, AL                  ;OCW1
+    STI
+ 
+    MOV AX,DATA 
+    MOV DS,AX 
+    MOV SI,3000H
+    MOV AL,00H
+    MOV [SI],AL
+    MOV [SI+1],AL 
+    MOV [SI+2],AL
+    MOV [SI+3],AL
+    MOV DI,3003H
+ 
+BEGIN:
+    CALL DIS
+    CALL CLEAR
+    CALL CCSCAN
+    JNZ INK1
+    CMP STT,01H
+    JNE BEGINCON
+    STI
+BEGINCON:    
+    CMP STT,00H
+    JNE BEGIN
+    CLI
+    JMP BEGIN 
+ 
+INK1:
+    CALL CCSCAN
+    JNZ INK2
+    JMP BEGIN
+INK2:
+    MOV CH,0FEH
+    MOV CL,00H
+COLUM:  
+    MOV AL,CH
+    MOV DX,MY8255_A
+    OUT DX,AL
+    MOV DX,MY8255_C
+    IN AL,DX
+L1: 
+    TEST AL,01H                  ;is L1?
+    JNZ L2
+    MOV AL,00H                   ;L1
+    JMP KCODE
+L2: 
+    TEST AL,02H                  ;is L2?
+    JNZ L3
+    MOV AL,04H                   ;L2
+    JMP KCODE
+L3: 
+    TEST AL,04H                  ;is L3?
+    JNZ L4
+    MOV AL,08H                   ;L3
+    JMP KCODE
+L4: 
+    TEST AL,08H                  ;is L4?
+    JNZ NEXT
+    MOV AL,0CH                   ;L4
+KCODE: 
+    ADD AL,CL
+    CALL PUTBUF
+    PUSH AX
+KON: 
+    CALL DIS
+    CALL CLEAR
+    CALL CCSCAN
+    JNZ KON
+    POP AX
+ 
+NEXT:  
+    INC CL
+    MOV AL,CH
+    TEST AL,08H
+    JZ KERR
+    ROL AL,1
+    MOV CH,AL
+    JMP COLUM
+KERR:
+    JMP BEGIN
+ 
+PUTBUF:
+ 
+STTT:
+    CMP STT,01H
+    JNE CC
+    CMP AL,0AH
+    JB GOBACK
+CC:
+    CMP AL,0CH
+    JNE BB
+    MOV AH,4CH
+    INT 21H
+BB:
+    CMP AL,0BH
+    JNE AA
+    CMP STT,00H
+    JNE SET0
+    MOV STT,01H
+    JMP GOBACK
+SET0:
+    MOV STT,00H    
+    JMP GOBACK
+ 
+AA:
+    CMP AL,0AH
+    JNE PUTBUFCON
+ 
+TESTT:
+    CMP STT,00H
+    JE TESTTCON
+    CALL FINISH
+    JMP GOBACK
+ 
+TESTTCON:    
+    MOV STT,01H    
+    PUSH SI
+    PUSH AX
+    MOV SI,3000H
+    MOV AL,[SI+1]
+    ROL AL,4
+    MOV AH,[SI]
+    ADD AL,AH
+    MOV SEC,AL
+    MOV AL,[SI+3]
+    ROL AL,4
+    MOV AH,[SI+2]
+    ADD AL,AH
+    MOV MIN,AL
+    POP AX
+    POP SI
+    JMP GOBACK
+ 
+PUTBUFCON:    
+    MOV SI,DI                    ;存键盘值到相应位的缓冲中
+    MOV [SI],AL
+    DEC DI
+    CMP DI,2FFFH
+    JNZ GOBACK
+    MOV DI,3003H
+GOBACK: 
+    RET
+ 
+MIR7:
+    STI 
+    PUSH AX
+    PUSH SI
+    MOV AX,MSEC 
+    INC AX 
+    MOV MSEC,AX
+    CMP AX,1000
+    JB MRET 
+ 
+    MOV AX,0
+    MOV MSEC,AX
+ 
+    MOV AL,SEC
+    SUB AL,1
+    DAS
+    MOV SEC,AL
+ 
+    CMP AL,01
+    JNB MTODIS
+ 
+ 
+    MOV AL,MIN
+ 
+    CMP AL,00
+    JNE CONTINUE
+    CALL FINISH
+    JMP MRET
+ 
+ 
+CONTINUE:
+    SUB AL,1
+    DAS
+    MOV MIN,AL
+ 
+    MOV AL,00H
+    MOV SEC,AL
+    MOV AL,00H
+    MOV SEC,AL
+    ADD AL,59H
+    DAA
+    MOV SEC,AL
+ 
+ 
+MTODIS: 
+    MOV AL,SEC
+    MOV AH,AL
+    MOV SI,3000H
+    AND AL,0FH
+    MOV [SI],AL
+    ROR AH,1
+    ROR AH,1
+    ROR AH,1
+    ROR AH,1
+    AND AH,0FH
+    MOV [SI+1],AH
+    MOV AL,MIN
+    MOV AH,AL
+    AND AL,0FH
+    MOV [SI+2],AL
+    ROR AH,1
+    ROR AH,1
+    ROR AH,1
+    ROR AH,1
+    AND AH,0FH
+    MOV [SI+3],AH
+ 
+MRET:
+    MOV AL, 20H
+    OUT 20H, AL                     ;中断结束命令
+    POP SI
+    POP AX
+    IRET
+ 
+CLEAR: 
+    MOV DX,MY8255_B
+    MOV AL,00H 
+    OUT DX,AL 
+    RET
+ 
+DIS:
+    PUSH AX 
+    MOV SI,3000H
+    MOV DL,0F7H
+    MOV AL,DL
+ 
+AGAIN: 
+    PUSH DX 
+    MOV DX,MY8255_A
+    OUT DX,AL
+    MOV AL,[SI]
+    MOV BX,OFFSET DTABLE
+    AND AX,00FFH 
+    ADD BX,AX
+    MOV AL,[BX]
+    MOV DX,MY8255_B 
+    OUT DX,AL 
+    CALL DALLY
+    INC SI
+    POP DX
+    MOV AL,DL
+    TEST AL,01H
+    JZ OUT1
+    ROR AL,1 
+    MOV DL,AL
+    JMP AGAIN
+OUT1: 
+    POP AX
+    RET
+ 
+DALLY: 
+    PUSH CX
+    MOV CX,000FH
+T1:
+    MOV AX,002FH
+T2:
+    DEC AX
+    JNZ T2
+    LOOP T1
+    POP CX
+    RET
+ 
+DELAY: 
+    PUSH CX
+    MOV CX,00FFH
+T3:
+    MOV AX,02FFH
+T4:
+    DEC AX
+    JNZ T4
+    LOOP T3
+    POP CX
+    RET
+ 
+CCSCAN: 
+    MOV AL,00H                   ;键盘扫描子程序
+    MOV DX,MY8255_A
+    OUT DX,AL
+    MOV DX,MY8255_C
+    IN AL,DX
+    NOT AL
+    AND AL,0FH
+    RET
+ 
+FINISH:
+    CLI
+    PUSH AX
+    MOV AL,00H
+    PUSH SI
+    MOV SI,3000H
+    MOV [SI],AL
+    MOV [SI+1],AL 
+    MOV [SI+2],AL
+    MOV [SI+3],AL
+    POP SI
+    MOV SEC,AL
+    MOV MIN,AL
+ 
+    PUSH CX
+ 
+    CALL CLEAR
+    CALL DELAY
+    MOV CX,003FH
+T5:    
+    CALL DIS
+    LOOP T5
+ 
+    CALL CLEAR
+    CALL DELAY
+ 
+    MOV CX,003FH
+T6:    
+    CALL DIS
+    LOOP T6
+ 
+    CALL CLEAR
+    CALL DELAY
+ 
+    MOV CX,003FH
+T7:    
+    CALL DIS
+    LOOP T7
+ 
+    POP CX
+    POP AX
+    MOV STT,00H
+    RET
+ 
+CODE ENDS
+    END START

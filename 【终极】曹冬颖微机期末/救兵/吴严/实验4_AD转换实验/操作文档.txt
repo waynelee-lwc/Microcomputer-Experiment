@@ -1,0 +1,3 @@
+PA0-PA7连接PB8-PB15(转换单元)  下面B8连接AD转换单元EOC
+MIR6连接AD转换单元EOC  ABC低电平 
+8255CS可连IOY2 控制字状态有关

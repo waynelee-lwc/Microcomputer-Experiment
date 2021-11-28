@@ -1,0 +1,124 @@
+基础实验1：
+;8255接口初始化，由CS连接的IOY端口决定。
+A8255_CON EQU 0606H        
+A8255_A EQU 0600H  ;A口用于输入位选信号，选择点亮特定的数码管
+A8255_B EQU 0602H  ;B口用于输入段码
+A8255_C EQU 0604H
+;数码管的数据表，分别表示0-9
+DATA SEGMENT
+TABLE1: 
+    DB 3FH
+    DB 06H
+    DB 5BH
+    DB 4FH
+    DB 66H
+    DB 6DH
+    DB 7DH
+    DB 07H
+    DB 7FH
+    DB 6FH
+DATA ENDS
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,DATA
+    MOV DS,AX  ;DS需要手动装入
+    LEA SI,TABLE1
+    MOV DX,A8255_CON
+    MOV AL,81H
+    OUT DX,AL;送8255控制字，AB输出，C低四位输入
+    ;MOV DX,A8255_B
+   ; MOV AL,3FH
+   ; OUT DX,AL;送B口：数字0
+    ;MOV DX,A8255_A
+   ; MOV AL,00H
+   ; OUT DX,AL;送A口，初始点亮数码管0
+    MOV CX,0AH;设定计数初值，一共要显示10个数字，0A
+
+X1: 
+    PUSH CX
+    MOV CX,06H;一共6个数码管，要依次点亮
+    MOV AL,11011111B
+X2:
+    MOV DX,A8255_A
+    OUT DX,AL;送位选码
+    ROR AL,1;循环右移
+    PUSH AX;OUT指令必须用AL/AX/EAX
+    MOV AL,[SI] ;取段码
+    MOV DX,A8255_B
+    OUT DX,AL   ;段码送B口，在数码管上显示
+    POP AX
+    CALL DELAY;延迟
+    LOOP X2;依次显示6次
+    POP CX
+    INC SI;显示下一个数字
+    LOOP X1
+    JMP START;题干要求‘循环上述过程‘
+    
+DELAY: ;延时程序
+    PUSH CX
+    MOV CX,0FFFFH
+X4:
+    LOOP X4
+    POP CX
+    RET
+    
+CODE ENDS
+     END START
+
+基础实验2：
+;8255接口初始化，由CS连接的IOY端口决定。
+A8255_CON EQU 0606H        
+A8255_A EQU 0600H  ;A口用于输入位选信号，选择点亮特定的数码管
+A8255_B EQU 0602H  ;B口用于输入段码
+A8255_C EQU 0604H
+;数码管的数据表，分别表示0-9
+DATA SEGMENT
+TABLE1: 
+    DB 06H
+    DB 5BH
+    DB 4FH
+    DB 66H
+    DB 6DH
+    DB 7DH
+DATA ENDS
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,DATA
+    MOV DS,AX  ;DS需要手动装入
+    LEA SI,TABLE1
+    MOV DX,A8255_CON
+    MOV AL,81H
+    OUT DX,AL;送8255控制字，AB输出，C低四位输入
+X2:    
+    MOV CX,06H
+    LEA SI,TABLE1
+    MOV AL,11111110B
+X1: 
+    MOV DX,A8255_A
+    OUT DX,AL;当前位选码选择的是最左边的显示灯
+    ROL AL,1 ;位选码循环左移一位，为下次送位选码做准备
+    PUSH AX
+    MOV AL,[SI]
+    MOV DX,A8255_B
+    OUT DX,AL
+    POP AX
+    CALL DELAY
+    INC SI
+    LOOP X1
+    JMP X2    
+    
+DELAY:
+    PUSH CX
+    MOV CX,0FFH
+X4:
+    LOOP X4
+    POP CX
+    RET
+    
+CODE ENDS
+     END START
+
+备注：为了达到此题要求的“稳定显示”，修改Delay延迟程序的时间
+

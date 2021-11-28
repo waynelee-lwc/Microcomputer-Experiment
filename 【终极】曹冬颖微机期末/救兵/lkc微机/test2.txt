@@ -1,0 +1,23 @@
+sstack segment stack
+dw 32 dup(?)
+sstack ends
+
+code segment
+start proc far
+assume cs:code
+mov ax,8000h
+mov ds,ax
+aa0:mov si,0000h
+mov cx,0010h
+mov ax,0000h
+aa1:mov [si],ax
+inc ax
+inc si
+inc si
+loop aa1
+
+mov ax,4c00h
+int 21h
+start endp
+code ends
+end start

@@ -1,0 +1,178 @@
+方式0
+A8254 EQU 0600H
+B8254 EQU 0602H 
+C8254 EQU 0604H 
+CON8254 EQU 0606H
+;8254计数器012以及控制端口的地址，由IOY决定
+SSTACK SEGMENT STACK 
+    DW 32 DUP(?) 
+SSTACK ENDS 
+CODE SEGMENT 
+    ASSUME CS:CODE
+START: 
+    MOV DX, CON8254
+    MOV AL, 36H             ;8254计数器0工作在方式3，产生方波，相当于CLK
+    OUT DX, AL
+    MOV DX, A8254
+    MOV AL, 0E8H
+    OUT DX, AL
+    MOV AL, 03H             ;分别写入低8位和高8位计数器初值，合起来是3E8H=1000
+    OUT DX, AL
+ 
+    MOV DX, CON8254
+    MOV AL, 70H             ;8254计数器0工作在方式0，计数时输出低电平，到0时输出高电平 
+    OUT DX, AL 
+    MOV DX, B8254 
+    MOV AL, 00H 
+    OUT DX, AL 
+    MOV AL, 0AH             ;写入计数初值0A00H
+    OUT DX, AL 
+AA1: 
+    JMP AA1 
+;将GATE1置为低电平，运行程序。
+;将GATE1置为高电平，在示波器中可以观察到OUT1输出低电平，待过一段时间后（计数器减至0）输出高电平。
+CODE ENDS 
+    END START
+
+方式一
+A8254 EQU 0600H
+B8254 EQU 0602H 
+C8254 EQU 0604H 
+CON8254 EQU 0606H
+SSTACK SEGMENT STACK 
+    DW 32 DUP(?) 
+SSTACK ENDS 
+CODE SEGMENT 
+    ASSUME CS:CODE
+START: 
+    MOV DX, CON8254
+    MOV AL, 36H
+    OUT DX, AL
+    MOV DX, A8254
+    MOV AL, 0E8H
+    OUT DX, AL
+    MOV AL, 03H
+    OUT DX, AL
+    ;8254计数器0工作在方式3，产生方波，相当于CLK
+    MOV DX, CON8254
+    MOV AL, 72H             ;8254计数器0工作在方式1，计数时输出低电平，到0时输出高电平 
+    OUT DX, AL 
+    MOV DX, B8254 
+    MOV AL, 00H 
+    OUT DX, AL 
+    MOV AL, 0AH             ;写入计数初值0A00H
+    OUT DX, AL 
+AA1: 
+    JMP AA1 
+;将GATE1置为低电平，运行程序，在示波器中可以看到OUT1输出高电平。
+;把开关闭合然后快速断开，使GATE1产生一次脉冲，在示波器中可以观察到OUT1输出低电平
+;待过一段时间后（计数器减至0）输出高电平。
+;重复上述过程，可以看到每次GATE1产生脉冲，8254都会开始计数（输出低电平），计数器减至0时恢复高电平。
+CODE ENDS 
+    END START
+
+方式三
+A8254 EQU 0600H
+B8254 EQU 0602H 
+C8254 EQU 0604H 
+CON8254 EQU 0606H
+SSTACK SEGMENT STACK 
+    DW 32 DUP(?) 
+SSTACK ENDS 
+CODE SEGMENT 
+    ASSUME CS:CODE
+START: 
+    MOV DX, CON8254
+    MOV AL, 36H
+    OUT DX, AL
+    MOV DX, A8254
+    MOV AL, 0E8H
+    OUT DX, AL
+    MOV AL, 03H
+    OUT DX, AL
+    ;8254计数器0工作在方式3，产生方波，相当于CLK
+    MOV DX, CON8254
+    MOV AL, 76H             ;8254计数器0工作在方式3，产生方波。 
+    OUT DX, AL 
+    MOV DX, B8254 
+    MOV AL, 00H 
+    OUT DX, AL 
+    MOV AL, 0AH             ;写入计数初值0A00H
+    OUT DX, AL 
+AA1: 
+    JMP AA1 
+;将GATE1置为高电平，运行程序，在示波器中可以看到OUT1规律输出方波。
+CODE ENDS 
+    END START
+
+产生周期1s的方波
+A8254 EQU 0600H
+B8254 EQU 0602H 
+C8254 EQU 0604H 
+CON8254 EQU 0606H
+SSTACK SEGMENT STACK 
+    DW 32 DUP(?) 
+SSTACK ENDS 
+CODE SEGMENT 
+    ASSUME CS:CODE
+START: 
+    MOV DX, CON8254
+    MOV AL, 36H
+    OUT DX, AL
+    MOV DX, A8254
+    MOV AL, 0E8H
+    OUT DX, AL
+    MOV AL, 03H
+    OUT DX, AL
+    ;8254计数器0工作在方式3，产生方波，相当于CLK
+    MOV DX, CON8254
+    MOV AL, 76H             ;8254计数器0工作在方式3，产生方波。 
+    OUT DX, AL 
+    MOV DX, B8254 
+    MOV AL, 0E8H
+    OUT DX, AL 
+    MOV AL, 03H             ;写入计数初值0E8H
+    OUT DX, AL 
+AA1: 
+    JMP AA1 
+;将GATE1置为高电平，运行程序，在示波器中可以看到OUT1规律输出方波。
+;CLK0输入为1MHz的计数脉冲，周期为1μs，产生1s周期的方波需要1s/1μs=1000000个计数
+;由于单个计数器的上限为2的16次方为65536远小于所需计数值
+;因此将1000000拆分成1000*1000，计数器0的计数初值为1000，产生1ms的计数脉冲输入到CLK1
+;计数器1的计数初值为1000，最终计数器1产生1s的方波。
+CODE ENDS 
+    END START
+
+方式2 负脉冲清晰可见
+A8254 EQU 0600H
+B8254 EQU 0602H 
+C8254 EQU 0604H 
+CON8254 EQU 0606H
+SSTACK SEGMENT STACK 
+    DW 32 DUP(?) 
+SSTACK ENDS 
+CODE SEGMENT 
+    ASSUME CS:CODE
+START: 
+    MOV DX, CON8254
+    MOV AL, 36H
+    OUT DX, AL
+    MOV DX, A8254
+    MOV AL, 0FFH
+    OUT DX, AL
+    MOV AL, 0FFH
+    OUT DX, AL
+    ;8254计数器在方式2下的负脉冲宽度仅为一个周期，所以加大OUT0产生的计数脉冲（CLK1）的周期。
+    MOV DX, CON8254
+    MOV AL, 74H             ;8254计数器0工作在方式3，产生方波。 
+    OUT DX, AL 
+    MOV DX, B8254 
+    MOV AL, 11H
+    OUT DX, AL 
+    MOV AL, 00H             ;写入计数初值11H，因为计数脉冲周期变长，次数适当减少计数器1的计数初值。
+    OUT DX, AL 
+AA1: 
+    JMP AA1 
+;将GATE1置为高电平，运行程序，在示波器中可以看到OUT1输出一段高电平后会输出一个宽度为一个周期的负脉冲。
+CODE ENDS 
+    END START

@@ -1,0 +1,125 @@
+A8255_CON EQU 0606H
+A8255_A EQU 0600H
+A8255_B EQU 0602H
+A8255_C EQU 0604H  ;8255的三个口
+
+DATA SEGMENT
+TABLE1:
+    DB 06H ;1
+    DB 5BH ;2
+    DB 4FH ;3
+SITE DB ?  ;一个变量叫site
+NUM  DB ?  ;一个变量叫num
+DATA ENDS
+
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,DATA
+    MOV DS,AX    ;装入数据段
+    
+    LEA SI,TABLE1 ;取数据表偏移
+    MOV AH,11111110B
+    MOV CX,04H  ;在一趟里，要移动四次
+B:
+	PUSH CX   ;修改了CX一定要压栈
+	MOV CX,100
+C:
+	PUSH CX
+	MOV BX,0
+	MOV AL,AH
+	MOV CX,3
+A:
+	MOV SITE,AL
+	PUSH AX
+	MOV AL,[SI+BX]
+	MOV NUM,AL
+	POP AX
+	CALL DISP
+	INC BX
+	ROL AL,1
+	LOOP A
+	
+	POP CX
+	LOOP C
+	CALL DELAY
+	;CALL DELAY_1_SECOUND
+	ROL AH,1
+	POP CX
+	;CALL DELAY0
+	LOOP B
+	JMP START	
+    
+DISP:  ;显示程序
+	PUSH AX
+	PUSH DX
+    MOV DX,A8255_CON
+    MOV AL,81H
+    OUT DX,AL   
+    
+    MOV DX,A8255_B
+    MOV AL,3FH
+    OUT DX,AL   
+    
+    MOV DX,A8255_A
+    MOV AL,00H
+    OUT DX,AL   
+    
+
+	MOV AL,[SITE]
+    MOV DX,A8255_A
+    OUT DX,AL     
+    
+    MOV AL,[NUM]
+    MOV DX,A8255_B
+    OUT DX,AL    
+
+    CALL DELAY
+    POP DX
+    POP AX
+    RET  
+    
+
+DELAY: 
+    PUSH CX
+    MOV CX,2500
+XX4:
+    LOOP XX4
+    POP CX
+    RET
+    
+ 
+    
+    
+    
+DELAY_1_SECOUND:
+	PUSH BX
+	PUSH CX
+	PUSH AX
+	
+	MOV AL,11111111B
+	MOV SITE,AL
+	MOV AL,00H
+	MOV NUM,AL
+	CALL DISP
+	
+    MOV BX,3E8H
+LP2:
+	MOV CX,176H
+LP1:
+	PUSHF
+	POPF
+	LOOP LP1
+	DEC BX
+	DEC BX
+	
+	JNZ LP2
+	
+	POP AX
+	POP CX
+	POP BX
+	RET
+	
+CODE ENDS
+     END START
+    

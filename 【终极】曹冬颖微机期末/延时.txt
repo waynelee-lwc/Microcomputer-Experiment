@@ -1,0 +1,9 @@
+﻿DELAY2:               ;长延时
+    PUSH CX
+    MOV CX, 0FFFFH
+D2: 
+    PUSH AX
+    POP AX
+    LOOP D2
+    POP CX
+    RET

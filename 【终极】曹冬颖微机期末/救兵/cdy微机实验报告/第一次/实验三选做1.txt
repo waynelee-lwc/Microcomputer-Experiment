@@ -1,0 +1,108 @@
+CODE  SEGMENT                          
+ASSUME   CS:CODE
+  START:       
+          MOV       AX, OFFSET MIR6
+          MOV       SI, 0038H
+          MOV       [SI], AX
+          MOV       AX, CS     
+          MOV       SI, 003AH           
+          MOV       [SI], AX      
+                  
+          MOV       AX, OFFSET MIR7 
+          MOV       SI, 003CH
+          MOV       [SI], AX   
+                 
+          MOV       AX, CS     
+          MOV       SI, 003EH           
+          MOV       [SI], AX    
+INIT:        
+          MOV DX,0646H 
+          MOV AL,90H
+          OUT DX,AL
+         
+     
+          CLI                     
+                             
+          MOV       AL, 11H             
+          OUT       20H, AL     ;ICW1,11H=00010001B        
+          MOV       AL, 08H             
+          OUT       21H, AL     ;ICW2,08H=00001000B
+          MOV       AL, 04H             
+          OUT       21H, AL     ;ICW3,04H=00000100B      
+          MOV       AL, 01H             
+          OUT       21H, AL     ;ICW4,01H=00000001B      
+          MOV       AL, 3FH             
+          OUT       21H, AL     ;OCW1,3FH=00111111B    
+
+          STI    
+          MOV AL,80H
+          MOV BH,02H        
+AA1:      
+          CALL DELAY
+          CMP BH,02H
+          JZ  AA1
+          CMP BH,01H
+          JZ  LEFTTOWARD
+RIGHTTOWARD:
+          CMP AL,80H
+          JZ  STOPMOVE  
+          ROL AL,1
+          JMP AA1
+LEFTTOWARD:
+          CMP AL,01H
+          JZ  STOPMOVE  
+          ROR AL,1
+          JMP AA1   
+STOPMOVE: 
+          MOV BH,02H
+          JMP AA1
+          
+          JMP EXIT 
+MIR6 PROC NEAR 
+     
+          PUSH DX
+          PUSH AX
+        
+          MOV BH,01H
+  
+          MOV AL,66H
+          OUT 20H,AL;66H=01100110B
+           
+          POP AX
+          POP DX   
+          IRET
+MIR6 ENDP     
+          
+MIR7 PROC  NEAR 
+          PUSH DX
+          PUSH AX   
+         
+          MOV BH,00H
+           
+          MOV AL,0E7H
+          OUT 20H,AL
+          
+          POP AX
+          POP DX   
+          IRET
+                         
+MIR7 ENDP        
+         
+DELAY PROC NEAR
+          PUSH CX          
+          MOV  CX,08FFFH  
+          MOV DX,0642H
+L0:       MOV BL,00H
+          OUT DX,AL 
+AA0:      ADD BL,01H
+          CMP BL,04H            
+          JNZ  AA0            
+          LOOP L0  
+        
+          POP CX          
+          RET            
+DELAY ENDP         
+EXIT:
+          INT 03H    
+CODE ENDS 
+END START

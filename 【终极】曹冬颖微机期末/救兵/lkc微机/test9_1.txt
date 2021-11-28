@@ -1,0 +1,215 @@
+;旧的右边5个左移，新的放在最低位
+;X2、X3获得输入
+;X5、PP：键码转换段码
+;QQ、XXM1输出
+A8255 EQU 0600H    ;选择数字
+B8255 EQU 0602H    ;B: 段码
+C8255 EQU 0604H
+CON8255 EQU 0606H
+
+DATA SEGMENT
+TABLELED :
+		   DB 3FH  ;0的段码
+		   DB 06H
+		   DB 5BH
+		   DB 4FH
+		   DB 66H
+		   DB 6DH
+		   DB 7DH
+		   DB 07H
+		   DB 7FH
+		   DB 6FH  ;9的段码
+		   DB 77H
+		   DB 7CH
+		   DB 39H
+		   DB 5EH
+		   DB 79H
+		   DB 71H
+TABLEKEY:  DB 11101110B           ;键码，前四位表示列，后四位表示行，0表示被按下的键的位置
+           DB 11011110B
+           DB 10111110B
+           DB 01111110B
+           DB 11101101B
+           DB 11011101B
+           DB 10111101B
+           DB 01111101B
+           DB 11101011B
+           DB 11011011B
+           DB 10111011B
+           DB 01111011B
+           DB 11100111B
+           DB 11010111B
+           DB 10110111B
+           DB 01110111B
+BUFFER:    DB 6 DUP(0)     ;内存，放入6个数码管
+DATA ENDS
+
+CODE SEGMENT
+       ASSUME CS:CODE,DS:DATA
+START: MOV AX,DATA
+       MOV DS,AX
+       
+       MOV AL,81H		;控制字A口输出，B口输出，C口低四位输入
+       MOV DX,CON8255
+       OUT DX,AL    ;初始化
+       
+AA:    LEA SI,BUFFER              ;LEA指令的作用是把源操作数的有效地址送到指定的寄存器SI
+       MOV BX,0
+       MOV AH,11111110B           ;新输入的数放在最右边位
+XX1:   MOV AL,[BX+SI]
+       MOV DX,B8255
+       OUT DX,AL
+       MOV AL,AH
+       MOV DX,A8255		;A口输出位码，且低电平有效
+       OUT DX,AL
+       INC BX        ;加一
+       ROL AH,1     ;左移一位
+       CALL DELAY  ;输出缓冲区到显示（output buffer to display）                ;消除抖动，延时
+       CMP BX,6
+       JNZ XX1 
+
+       
+       MOV DX,B8255
+       MOV AL,00H    ;清空显示缓冲
+       OUT DX,AL
+             
+       MOV DX,A8255
+       MOV AL,00H    ;选择所有的数字显示位（select all digit display）
+       OUT DX,AL
+
+       MOV DX,C8255    
+       IN AL,DX
+       AND AL,0FH
+       CMP AL,0FH
+       JZ AA         ;没有按下调到AA
+       
+       CALL DELAY20
+       
+
+       ;同上
+       LEA SI,BUFFER      ;把源操作数的有效地址送到指定的寄存器
+       MOV BX,0          
+       MOV AH,11111110B		;表示最右位
+XXX1:   MOV AL,[BX+SI]
+       MOV DX,B8255
+       OUT DX,AL		;把新键入的从缓存取出送出去
+       MOV AL,AH
+       MOV DX,A8255
+       OUT DX,AL
+       INC BX          ;缓存加一
+       ROL AH,1        ;左移一位
+       CALL DELAY
+       CMP BX,6     
+       JNZ XXX1    ;display
+
+
+       MOV DX,B8255
+       MOV AL,00H
+       OUT DX,AL  
+           
+       MOV DX,A8255
+       MOV AL,00H
+       OUT DX,AL
+
+       MOV DX,C8255
+       IN AL,DX
+       AND AL,0FH
+       CMP AL,0FH
+       JZ AA                          ;消除抖动？？
+       
+       MOV AH,11111110B      ;检查哪个键被按下(check whether any key pressed)
+       MOV CX,4              
+X2:    MOV DX,A8255           ;输入，A port stands for row
+	   MOV AL,AH
+	   OUT DX,AL
+	   MOV DX,C8255    
+	   IN AL,DX
+	   AND AL,0FH        
+	   CMP AL,0FH          ;比较指令，如果低四位都是1111的话代表没有输入，继续循环
+	   JNZ X3
+	   ROL  AH,1            ;左移一位
+	   LOOP X2
+	   MOV AH,80H
+	   JMP XEND            
+X3:    MOV CL,4         ;输入
+       SHL AH,CL       ;将AH左移四位
+       OR AL,AH        ;al contribute low digits,ah high digits
+       LEA BX,TABLEKEY  ;BX代表的是键位的起始位置
+       MOV CL,0      ;offset for correct position
+X4:    CMP AL,[BX]
+       JZ X5
+       INC CL
+       INC BX
+       CMP CL,10H
+       JNZ X4
+       MOV AH,0FFH
+       JMP XEND
+X5:    MOV AH,CL      ;转换，ah-<offset;
+		
+	   
+       LEA SI,BUFFER     ;选择哪个数码管
+       MOV CX,5
+PP:    MOV DL,[SI+1]   ;转换，低五位向左移
+       MOV [SI],DL
+       INC SI
+       LOOP PP
+       
+       LEA SI,TABLELED
+       MOV AL,AH    
+       MOV AH,0
+       MOV BX,AX
+       MOV AH,[SI+BX]
+       LEA SI,BUFFER
+       MOV [SI+5],AH    ;更新最低位
+       
+QQ:       LEA SI,BUFFER     ;输出
+       MOV BX,0
+       MOV AH,11111110B
+XXM1:   MOV AL,[BX+SI]      ;输出
+       MOV DX,B8255
+       OUT DX,AL
+       MOV AL,AH
+       MOV DX,A8255
+       OUT DX,AL
+       INC BX
+       ROL AH,1
+       CALL DELAY
+       CMP BX,6
+       JNZ XXM1 
+
+       MOV DX,B8255
+       MOV AL,00H
+       OUT DX,AL
+       MOV DX,A8255
+       MOV AL,00H
+       OUT DX,AL
+       MOV DX,C8255
+       IN AL,DX
+       AND AL,0FH
+       CMP AL,0FH
+       JNZ QQ
+      
+       JMP AA
+       
+DELAY: PUSH CX
+       MOV CX,0300H
+LL:    LOOP LL
+       POP CX
+       RET
+       
+DELAY20:PUSH CX
+       MOV CX,0100H
+T1:    MOV AX,009FH
+T2:    DEC AX
+       JNZ T2
+       LOOP T1
+       POP CX
+
+       RET
+       
+XEND:  MOV AH,4CH
+       INT 21H
+       
+CODE ENDS
+END START
+	   

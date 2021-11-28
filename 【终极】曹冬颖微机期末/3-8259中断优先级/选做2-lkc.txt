@@ -1,0 +1,108 @@
+﻿code  segment                          
+assume   cs:code
+  start:       
+          mov       ax, offset MIR6
+          mov       si, 0038h
+          mov       [si], ax
+          mov       ax, cs     
+          mov       si, 003ah           
+          mov       [si], ax      
+                  
+          mov       ax, offset MIR7 
+          mov       si, 003ch
+          mov       [si], ax   
+                 
+          mov       ax, cs     
+          mov       si, 003eh           
+          mov       [si], ax    
+init:        
+          mov dx,0646h 
+          mov al,90h
+          out dx,al
+         
+     
+          cli                     
+                             
+          mov       al, 11h             
+          out       20h, al     ;ICW1,11H=00010001B        
+          mov       al, 08h             
+          out       21h, al     ;ICW2,08H=00001000B
+          mov       al, 04h             
+          out       21h, al     ;ICW3,04H=00000100B      
+          mov       al, 01h             
+          out       21h, al     ;ICW4,01H=00000001B      
+          mov       al, 3fh             
+          out       21h, al     ;OCW1,3FH=00111111B    
+
+          sti    
+          mov al,80h
+          mov bh,02h        
+aa1:      
+          call delay
+          cmp bh,02h
+          jz  aa1
+          cmp bh,01h
+          jz  lefttoward
+righttoward:
+          cmp al,80h
+          jz  stopmove  
+          rol al,1
+          jmp aa1
+lefttoward:
+          cmp al,01h
+          jz  stopmove  
+          ror al,1
+          jmp aa1   
+stopmove: 
+          mov bh,02h
+          jmp aa1
+          
+          jmp exit 
+MIR6 proc near 
+     
+          push dx
+          push ax
+        
+          mov bh,01h
+  
+          mov al,66h
+          out 20h,al;66H=01100110B
+           
+          pop ax
+          pop dx   
+          iret
+MIR6 endp     
+          
+MIR7 proc  near 
+          push dx
+          push ax   
+         
+          mov bh,00h
+           
+          mov al,0e7h
+          out 20h,al
+          
+          pop ax
+          pop dx   
+          iret
+                         
+MIR7 endp        
+         
+delay proc near
+          push cx          
+          mov  cx,08fffh  
+          mov dx,0642h
+l0:       mov bl,00h
+          out dx,al 
+aa0:      add bl,01h
+          cmp bl,04h            
+          jnz  aa0            
+          loop l0  
+        
+          pop cx          
+          ret            
+delay endp         
+exit:
+          int 03h    
+code ends 
+end start

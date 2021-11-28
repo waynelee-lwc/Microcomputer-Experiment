@@ -1,0 +1,14 @@
+code segment
+assume cs:code
+start:
+mov dx,0646h
+mov al,90h
+out dx,al
+aa0:
+mov dx,0640h
+in al,dx
+mov dx,0642h
+out dx,al
+jmp aa0
+code ends
+end start

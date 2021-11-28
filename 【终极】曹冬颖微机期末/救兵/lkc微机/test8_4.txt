@@ -1,0 +1,80 @@
+A8255_CON EQU 0606H
+A8255_A EQU 0600H
+A8255_B EQU 0602H
+A8255_C EQU 0604H
+
+DATA SEGMENT
+TABLE1:
+    DB 7DH
+    DB 6DH
+    DB 66H
+    DB 4FH
+    DB 5BH
+    DB 06H
+SITE DB ?
+NUM  DB ?
+DATA ENDS   
+
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,DATA
+    MOV DS,AX     
+    
+    LEA SI,TABLE1
+    MOV BX,0
+    
+    MOV CX,6
+    MOV AL,11011111B
+ A:
+ 	MOV SITE,AL
+ 	
+    PUSH AX
+    MOV AL,[SI+BX]
+    MOV NUM,AL
+    POP AX
+    CALL DISP
+    ROR AL,1
+    INC BX
+    LOOP A
+    JMP START 
+DISP:
+	PUSH AX
+	PUSH DX
+    MOV DX,A8255_CON
+    MOV AL,81H
+    OUT DX,AL   
+    
+    MOV DX,A8255_B
+    MOV AL,3FH
+    OUT DX,AL   
+    
+    MOV DX,A8255_A
+    MOV AL,00H
+    OUT DX,AL   
+    
+
+	MOV AL,[SITE]
+    MOV DX,A8255_A
+    OUT DX,AL     
+    
+    MOV AL,[NUM]
+    MOV DX,A8255_B
+    OUT DX,AL    
+
+    CALL DELAY 
+    POP DX
+    POP AX
+    RET  
+    
+
+DELAY:
+    PUSH CX
+    MOV CX,0FFH
+X4:
+    LOOP X4
+    POP CX
+    RET
+    
+CODE ENDS
+     END START

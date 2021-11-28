@@ -1,0 +1,111 @@
+
+A8254 EQU 0600H
+B8254 EQU 0602H 
+C8254 EQU 0604H 
+CON8254 EQU 0606H
+;8254计数器012以及控制端口的地址，由IOY决定
+SSTACK SEGMENT STACK 
+    DW 32 DUP(?) 
+SSTACK ENDS 
+CODE SEGMENT 
+    ASSUME CS:CODE
+START: 
+    MOV DX,0646H
+    MOV AL,10010000B;设置8255的控制字
+    OUT DX,AL;将控制字写入控制段端口
+    ;中断向量先存IP再存CS
+    MOV AX,OFFSET MIR6;6号中断服务程序的偏移地址
+    MOV SI,0038H;6号的中断向量起始地址
+    MOV [SI],AX;****将服务程序地址填入中断向量（占两个字节）
+    MOV AX,CS
+    MOV SI,003AH;0038H+02H=003AH
+    MOV [SI],AX
+    ;至此已填入MIR6的中断向量
+    CLI;将所有可屏蔽中断终止，以便写入初始化命令字
+    MOV AL,00010001B;初始化命令字ICW1的内容
+    OUT 20H,AL
+    MOV AL,00001000B;
+    OUT 21H,AL;初始化命令字ICW2的内容
+    MOV AL,00000100B
+    OUT 21H,AL;初始化命令字ICW3的内容
+    MOV AL,00000001B
+    OUT 21H,AL;初始化命令字ICW4的内容
+    MOV AL,00111111B
+    OUT 21H,AL;初始化命令字OCW1的内容
+    
+    MOV DX, CON8254
+    MOV AL, 36H
+    OUT DX, AL
+    MOV DX, A8254
+    MOV AL, 0E8H
+    OUT DX, AL
+    MOV AL, 03H
+    OUT DX, AL
+    ;8254计数器0工作在方式3，产生方波，相当于CLK
+    MOV DX, CON8254
+    MOV AL, 76H             ;8254计数器0工作在方式3，产生方波。 
+    OUT DX, AL 
+    MOV DX, B8254 
+    MOV AL, 00H 
+    OUT DX, AL 
+    MOV AL, 0AH             ;写入计数初值0A00H
+    OUT DX, AL
+    MOV CX,0
+    STI;结束CLI
+
+    
+AA1:
+    JMP AA1
+MIR6:
+    MOV AL,20H;命令字OCW2，表示结束中断
+    OUT 20H,AL;写入OCW2,结束中断
+    INC CX
+    MOV DX,0642H
+    CMP CX,1
+    JNZ L2
+    MOV AL,00000001B
+    OUT DX,AL
+    JMP L10
+L2: CMP CX,2
+    JNZ L3
+    MOV AL,00000011B
+    OUT DX,AL
+    JMP L10
+L3: CMP CX,3
+    JNZ L4
+    MOV AL,00000111B
+    OUT DX,AL
+    JMP L10
+L4: CMP CX,4
+    JNZ L5
+    MOV AL,00001111B
+    OUT DX,AL
+    JMP L10
+L5:CMP CX,5
+    JNZ L6
+    MOV AL,00011111B
+    OUT DX,AL
+    JMP L10
+L6: CMP CX,6
+    JNZ L7
+    MOV AL,00111111B
+    OUT DX,AL
+    JMP L10
+L7: CMP CX,7
+    JNZ L8
+    MOV AL,01111111B
+    OUT DX,AL
+    JMP L10
+L8: CMP CX,8
+    JNZ L9
+    MOV AL,11111111B
+    OUT DX,AL
+    JMP L10
+L9: MOV AL,11111111B
+    OUT DX,AL
+L10:IRET 
+AA2: 
+    JMP AA2
+;将GATE1置为高电平，运行程序，在示波器中可以看到OUT1规律输出方波。
+CODE ENDS 
+    END START

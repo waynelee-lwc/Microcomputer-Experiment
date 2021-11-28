@@ -1,0 +1,61 @@
+code segment
+    assume cs:code
+start: 
+mov ax, 0000h
+    mov ds, ax
+
+    mov dx, 0686h
+    mov al, 90h
+    out dx, al
+
+    mov ax, offset mir6 ;adc0809的eoc引脚连接mir6
+    mov si, 0038h
+    mov [si], ax
+    mov ax,cs
+    mov si,003ah
+    mov [si], ax
+
+    cli
+    mov al, 11h
+    out 20h, al
+    mov al, 08h
+    out 21h, al
+    mov al,04h
+    out 21h, al
+    mov al, 05h
+    out 21h, al
+    mov al, 10111111b
+    out 21h, al
+    sti
+    ;8255与8259初始化，详见实验三
+
+aa1:
+    cli            ;关闭中断
+    mov dx, 0640h  ;启动ad采样
+    out dx, al
+    call delay     ;延时一小段时间之后开中断，保证每一次ad转换中断只响应一次
+    sti
+    jmp aa1
+    ;此处对中断的操作以及延时的调用原因详见《微型计算机原理与接口技术》p277
+mir6:
+    sti
+    mov dx,0640h   ;读入ad转换之后的值
+    in al,dx
+    mov dx, 0682h  ;从8255b口输出
+    out dx, al
+    mov al, 20h
+    out 20h, al
+    iret
+
+delay:
+    push cx
+    push ax
+    mov cx,0fffh
+l1:
+    loop l1
+    pop ax
+    pop cx
+    ret
+
+code ends
+    end start

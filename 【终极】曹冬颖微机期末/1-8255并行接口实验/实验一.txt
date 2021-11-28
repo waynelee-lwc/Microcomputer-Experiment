@@ -1,0 +1,74 @@
+基础实验：
+CODE SEGMENT
+           ASSUME  CS:CODE
+START:  MOV AX,90
+               MOV DX,0646H
+               OUT DX,AX
+A1:         MOV DX,0640H
+               IN  AX,DX
+               CMP AX,FFH   ;选做实验一
+               JZ  AA
+               MOV DX,0642H
+               OUT DX,AX
+               JMP A1
+AA:        MOV AH,4CH
+               INT 21H
+CODE     END
+               END START
+扩展实验二：
+CODE SEGMENT
+           ASSUME  CS:CODE
+START:  MOV AX,90
+               MOV DX,0646H
+               OUT DX,AX
+A1:         MOV DX,0640H
+               IN  AX,DX
+               AND  AX,01
+               CMP AX,00
+               JZ   A2
+A3:         MOV AX,F0H
+               MOV DX,0642H
+               OUT DX,AX
+               JMP AA
+A2:         MOV AX,0FH
+               MOV DX,0642H
+               OUT DX,AX
+AA:        MOV AH,4CH
+               INT 21H
+CODE     END
+               END START
+扩展实验三：
+CODE SEGMENT
+           ASSUME  CS:CODE
+START:  MOV AX,90
+               MOV DX,0646H
+               OUT DX,AX
+A1:         MOV DX,0640H
+               IN  AX,DX
+               AND  AX,03H
+               CMP AX,00
+               JZ   A2
+               CMP AX,01
+               JZ   A4
+               CMP AX,02H
+               JZ   A5
+A3:         MOV AX,FFH
+               MOV DX,0642H
+               OUT DX,AX
+               JMP  AA
+A2:         MOV AX,00H
+               MOV DX,0642H
+               OUT DX,AX
+               JMP  AA
+A4:         MOV AX,0FH
+               MOV DX,0642H
+               OUT DX,AX
+               JMP  AA
+A5:         MOV AX,F0H
+               MOV DX,0642H
+               OUT DX,AX
+               JMP  AA
+AA:        MOV AX,4CH
+               INT 21H
+CODE     END
+               END START

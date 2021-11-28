@@ -1,0 +1,45 @@
+	
+	MOV CL,0H               ;初值
+
+##########################
+
+	CLI			;关中断
+	MOV DX,20H
+	MOV AL,13H
+	OUT DX,AL
+	MOV DX,21H
+	MOV AL,08H
+	OUT DX,AL
+	MOV AL,07H
+	OUT DX,AL  
+	MOV AL,2FH
+	OUT DX,AL	;初始化主片		
+	
+	MOV AX,0
+	MOV ES,AX	;中断向量表段地址
+	MOV DI,38H	;中断向量表偏移地址
+	MOV AX,OFFSET IR6
+	CLD
+	STOSW
+	MOV AX,SEG IR6
+	STOSW
+	STI
+
+########################
+
+	IR6:
+	CLI
+	PUSH AX
+	PUSH DX
+	MOV DX,0642H
+	SHL CL,1
+	ADD CL,1
+	MOV AL,CL
+	OUT DX,AL
+	MOV DX,20H  ;中断结束
+	MOV AL,20H
+	OUT DX,AL
+	POP DX
+	POP AX
+	STI
+	IRET

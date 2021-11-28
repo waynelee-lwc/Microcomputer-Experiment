@@ -1,0 +1,87 @@
+CODE SEGMENT
+ASSUME CS:CODE
+START:
+MOV DX,0646H
+MOV AL,10010000B;设置8255的控制字
+OUT DX,AL;将控制字写入控制段端口
+MOV DX,0642H;8255B口地址
+MOV AL,10000000B;
+OUT DX,AL;题目规定PB口的输出
+;中断向量先存IP再存CS
+MOV AX,OFFSET MIR6;6号中断服务程序的偏移地址
+MOV SI,0038H;6号的中断向量起始地址
+MOV [SI],AX;****将服务程序地址填入中断向量（占两个字节）
+MOV AX,CS
+MOV SI,003AH;0038H+02H=003AH
+MOV [SI],AX
+;至此已填入MIR6的中断向量
+MOV AX,OFFSET MIR7;6号中断服务程序的偏移地址
+MOV SI,003CH;6号的中断向量起始地址
+MOV [SI],AX;****将服务程序地址填入中断向量（占两个字节）
+MOV AX,CS
+MOV SI,003EH;0038H+02H=003AH
+MOV [SI],AX
+;至此已填入MIR7的中断向量
+
+CLI;将所有可屏蔽中断终止，以便写入初始化命令字
+MOV AL,00010001B;初始化命令字ICW1的内容
+OUT 20H,AL
+MOV AL,00001000B;
+OUT 21H,AL;初始化命令字ICW2的内容
+MOV AL,00000100B
+OUT 21H,AL;初始化命令字ICW3的内容
+MOV AL,00000001B
+OUT 21H,AL;初始化命令字ICW4的内容
+MOV AL,00111111B
+OUT 21H,AL;初始化命令字OCW1的内容
+STI;结束CLI
+
+
+AA1:
+MOV DX,0642H
+JMP AA1
+;MIR6:
+;MOV AL,20H;命令字OCW2，表示结束中断
+;OUT 20H,AL;写入OCW2,结束中断
+;MOV AL,10000000B
+;MOV CX,7
+;L1:
+;ROR AL,1
+;OUT DX,AL
+;LOOP L1
+;IRET;中断返回指令，回到主程序发生中断的位置 ???
+
+MIR6:
+MOV AL,20H;命令字OCW2，表示结束中断
+OUT 20H,AL;写入OCW2,结束中断
+MOV AL,10000000B
+L11:
+CMP AL,01H
+JZ L1;到达最右端
+ROR AL,1
+OUT DX,AL
+MOV CX,0FFH
+L12:
+CMP AL,01H
+LOOP L12
+JMP L11
+L1:
+IRET;中断返回指令，回到主程序发生中断的位置 ???
+
+MIR7:
+;L22:
+;CMP AL,10000000B
+;JZ L2;到达最左端
+;ROL AL,1
+;OUT DX,AL
+;JMP L22
+;L2:
+;OUT DX,AL
+;JMP L2
+
+;MOV AL,20H;命令字OCW2，表示结束中断
+;OUT 20H,AL;写入OCW2,结束中断
+
+IRET;中断返回指令，回到主程序发生中断的位置
+CODE ENDS
+END START

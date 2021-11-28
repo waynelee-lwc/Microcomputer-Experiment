@@ -1,0 +1,92 @@
+
+
+CODE SEGMENT
+	ASSUME CS:CODE
+START:	MOV DX,0646H
+		MOV AL,90H
+		OUT DX,AL
+	
+		
+		MOV AX, OFFSET MIR6
+		MOV SI ,0038H
+		MOV [SI],AX  ;段内偏移
+		INC SI
+		INC SI
+		MOV AX,CS
+		MOV [SI], AX
+		
+		MOV AX ,OFFSET MIR7
+		MOV SI,003CH
+		MOV [SI],AX
+		INC SI
+		INC SI
+		MOV AX,CS
+		MOV [SI],AX
+		
+		CLI
+	MOV AL,13H    
+    OUT 20H, AL    ;命令字ICW1，11H=00010001B
+    MOV AL, 08H
+    OUT 21H, AL    ;命令字ICW2，08H=00001000B
+    MOV AL, 04H
+    OUT 21H, AL    ;命令字ICW3，04H=00000100B
+    MOV AL, 07H
+    OUT 21H, AL    ;命令字ICW4，07H  自动结束    ！！！！！
+    MOV AL, 3FH    ;OCW1
+    OUT 21H, AL 
+    STI
+
+AA1: 
+    MOV DX, 0642H;主程序
+    MOV AL, 0FFH
+    OUT DX, AL
+    JMP AA1		
+		
+MIR6:  ;绿灯亮
+	PUSH CX
+	PUSH BX
+	STI
+    MOV DX, 0642H
+    MOV AL, 0FH
+    OUT DX, AL
+   
+    
+ 
+    MOV CX,0FFFH  ;CX为计数寄存器，确定循环次数
+L1:	MOV BX ,00FFH
+L3:	DEC BX
+	MOV AL, 0FH
+    OUT DX, AL
+    JNZ L3
+    LOOP L1
+
+MOV AL, 20H    ;命令字OCW2，20H=00100000B，表示结束中断
+    OUT 20H, AL    ;写入OCW2，结束中断 
+    POP BX
+    POP CX
+    IRET
+    ;中断返回指令，回到主程序发生中断的位置
+MIR7: ;红灯亮 
+STI
+    MOV DX, 0642H
+    MOV AL,0F0H
+    OUT DX,AL
+ 
+
+    MOV CX,0FFFH
+L5:	MOV BX,00FFH
+L10:DEC BX
+	MOV AL,0F0H
+    OUT DX,AL
+ 
+	JNZ L10 
+    LOOP L5
+    MOV AL,20H
+    OUT 20H,AL
+    IRET
+		
+		
+		
+		
+CODE ENDS
+	END START

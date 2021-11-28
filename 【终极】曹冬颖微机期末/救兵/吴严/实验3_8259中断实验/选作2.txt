@@ -1,0 +1,160 @@
+DATA SEGMENT
+   FLAGPLACE DB 00H
+   FLAGSTATE DB 00H   ;是否有中断嵌套 0 无
+DATA ENDS
+
+CODE SEGMENT
+	ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,DATA
+    MOV DS,AX
+    
+	MOV AX,0000H
+	MOV DS,AX
+	MOV DX,0646H
+	MOV AL,90H
+	OUT DX,AL
+
+	
+	;设置中断向量
+	MOV AX,OFFSET MIR6
+	MOV SI,0038H
+	MOV [SI],AX
+	INC SI
+	INC SI
+	MOV AX,CS
+	MOV [SI],AX
+	
+	
+	MOV AX,OFFSET MIR7
+	MOV SI,003CH
+	MOV [SI],AX
+	INC SI
+	INC SI
+	MOV AX,CS
+	MOV [SI],AX
+	
+	CLI
+	MOV AL,13H    
+    OUT 20H, AL    ;命令字ICW1，11H=00010001B
+    MOV AL, 08H
+    OUT 21H, AL    ;命令字ICW2，08H=00001000B
+    MOV AL, 04H
+    OUT 21H, AL    ;命令字ICW3，04H=00000100B
+    MOV AL, 07H
+    OUT 21H, AL    ;命令字ICW4，07H  自动结束    ！！！！！
+    MOV AL, 3FH    ;OCW1
+    OUT 21H, AL 
+    STI
+	
+	
+	MOV BL,01H          ;初始保持在最右端
+	MOV AX,0080H
+	MOV DX,0642H
+	OUT DX,AL
+	LEA DI,FLAGPLACE   ;保存改变方向的位置    ,  BH
+	LEA SI,FLAGSTATE    ;是否有中断嵌套       ,  AH
+AA1:
+	CMP BL,00H
+	JA AA2       ;>
+	CMP AL,01H       ;
+	JNE Q1 
+	  
+	MOV AH,[SI]
+	CMP AH,02H   ;= 则是第二种情况  ，表明要向左运动
+	JNZ Q3
+	MOV BL,01H   
+	MOV [SI],01H
+	JMP AA2
+	
+Q3:	MOV BH,[DI]  
+	CMP BH,00H   ;
+	JNZ  Q2
+	MOV [SI],00H    ;没动
+	JMP AA1
+Q2:	MOV AL,[DI]
+	MOV BL,01H
+	MOV [DI],00H  ;位置清0
+	JMP AA2
+	
+Q1:	
+	SHR AL,1         ;右移
+	
+	MOV AH,[SI]
+	CMP AH,02H
+	JZ Q5
+	MOV [SI],01H    ;在运动过程中
+	
+Q5:	MOV DX,0642H
+	OUT DX,AL
+	MOV CX,0FFFFH
+L1:
+	LOOP L1
+	MOV CX,0FFFFH
+L2:	
+	LOOP L2
+	JMP AA1
+
+AA2:              ;左移
+    MOV [DI],00H
+	MOV DX,0642H
+	CMP AL,80H
+	JNE Q4
+	MOV [SI],00H
+	JMP AA1
+Q4:	
+	
+	SHL AL,1
+	
+	MOV [SI],01H
+	
+	MOV DX,0642H
+	OUT DX,AL
+	MOV CX,0FFFFH
+L3:	
+	LOOP L3
+	MOV CX,0FFFFH
+L4:
+	LOOP L4
+	JMP AA1
+	
+MIR6:
+	STI
+	PUSH AX
+	
+
+	MOV AH,[SI]   ;
+	CMP AH,01H
+	JNZ ONE
+;	MOV AH,02H
+    PUSH AX
+    ROR AL,1
+    MOV [DI],AL   ;保存改变方向的位置
+    POP AX
+ONE:
+	MOV BL,00H
+	MOV AL,20H
+	OUT 20H,AL
+	POP AX
+	IRET
+MIR7:
+	STI
+	PUSH AX
+	PUSH CX
+	
+	MOV CL,01H
+	MOV AH,[SI]   ;
+	CMP AH,01H
+	JNZ ONE1
+	MOV AH,02H
+	MOV CL,00H
+ONE1:MOV [SI],AH
+	
+	MOV BL,CL  
+	MOV AL,20H  ;设置ocw2控制字
+	OUT 20H,AL
+	POP CX
+	POP AX
+	IRET
+CODE ENDS
+	END START

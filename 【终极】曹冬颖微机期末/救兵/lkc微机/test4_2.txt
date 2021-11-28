@@ -1,0 +1,31 @@
+code segment
+    assume cs:code
+start:
+    mov dx, 0686h  ;8255初始化，同上
+    mov al, 90h
+    out dx, al
+
+x3: 
+    mov dx, 0640h  ;启动ad采样
+    out dx, al
+
+x1: 
+    mov dx,0680h
+    in al,dx       ;从8255a口读入eoc状态
+    test al,80h    ;检测eoc是否为高电平
+    jnz x1         ;如果不是低电平，表示未开始转换，跳转继续查询
+
+x2:
+    mov dx,0680h
+    in al,dx       ;从8255a口读入eoc状态   
+    test al,80h    ;检测eoc是否为高电平
+    jz x2          ;如果是高电平，表示装换完成
+
+    mov dx,0640h
+    in al,dx       ;从adc0809读入转换完成的数据
+    mov dx, 0682h
+    out dx,al      ;从8255b口输出转换完成的数据
+    jmp x3         ;循环转换
+    ;此处对eoc状态的判断详见《微型计算机原理与接口技术》p2274图7.4.8
+code ends 
+    end start

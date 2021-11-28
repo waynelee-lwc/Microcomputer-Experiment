@@ -1,0 +1,55 @@
+﻿基础实验（规则字）
+CODE SEGMENT
+ASSUME  CS:CODE
+START:  MOV AX,8000H
+        MOV DS,AX
+        SUB DX,DX
+        SUB BX,BX
+        MOV CX,16
+A:      MOV [BX],DX
+        INC BX
+        INC BX
+        INC DX
+        LOOP A
+        MOV AH,04CH
+        INT 21H
+CODE    ENDS
+        END START
+基础实验（非规则字）
+CODE SEGMENT
+ASSUME CS:CODE
+START: MOV AX,8000H
+       MOV DS,AX
+       MOV BX,0000H
+       ;MOV [BX],00H
+       INC BX
+       MOV DX,0000H
+       MOV CX,16
+A:     MOV [BX],DX
+       INC DX
+       INC BX
+       INC BX
+       LOOP A
+       ;MOV [BX],00H
+       MOV AH,4CH
+       INT 21H
+CODE   ENDS
+       END START
+基础实验（字节）
+CODE SEGMENT
+     ASSUME CS:CODE
+START: MOV AX,8000H
+       MOV DS,AX
+       SUB DX,DX
+       SUB BX,BX
+       MOV CX,16
+A:     MOV [BX],DL
+       MOV [BX+1],DH
+       INC BX
+       INC BX
+       INC DX
+       LOOP A
+       MOV AH,4CH
+       INT 21H
+CODE   ENDS
+       END START
