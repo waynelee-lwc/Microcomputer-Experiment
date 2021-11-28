@@ -1,0 +1,64 @@
+A8255 EQU 0600H
+B8255 EQU 0602H
+C8255 EQU 0604H
+CON8255 EQU 0606H  
+
+A0809 EQU 0640H
+B0809 EQU 0642H
+
+CODE SEGMENT
+    ASSUME CS:CODE
+START: 
+    MOV DX, CON8255
+    MOV AL, 90H
+    OUT DX, AL
+    ;设置中断向量
+    MOV AX, OFFSET MIR6 ;ADC0809的EOC引脚连接MIR6
+    MOV SI, 0038H
+    MOV [SI], AX
+    MOV AX,CS
+    MOV SI,003AH
+    MOV [SI], AX
+    ;设置ICW1~ICW4和OCW1
+    CLI
+    MOV AL, 11H
+    OUT 20H, AL
+    MOV AL, 08H
+    OUT 21H, AL
+    MOV AL,04H
+    OUT 21H, AL
+    MOV AL, 07H
+    OUT 21H, AL
+    MOV AL, 2FH
+    OUT 21H, AL
+    STI
+AA1:
+    CLI            ;关中断
+	MOV DX,B0809
+    MOV AL,01H
+    OUT DX,AL      ;启动1通道	
+    MOV DX, A0809  ;启动AD采样
+    OUT DX, AL
+    CALL DELAY     ;延时一小段时间之后开中断，保证每一次AD转换中断只响应一次
+    STI
+    JMP AA1
+    
+MIR6:
+    ;STI
+    MOV DX,A0809   ;读入AD转换之后的值
+    IN AL,DX
+    MOV DX, B8255  ;从8255B口输出
+    OUT DX, AL
+    IRET
+    
+DELAY:
+    PUSH CX
+    PUSH AX
+    MOV CX,0FFFH
+L1:	LOOP L1
+    POP AX
+    POP CX
+    RET
+ 
+CODE ENDS
+    END START

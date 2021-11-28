@@ -1,0 +1,42 @@
+A8255 EQU 0600H
+B8255 EQU 0602H
+C8255 EQU 0604H
+CON8255 EQU 0606H  
+
+A0809 EQU 0640H
+B0809 EQU 0642H
+ 
+CODE SEGMENT
+    ASSUME CS:CODE
+ 
+START: 
+    MOV DX, CON8255  
+    MOV AL, 90H    ;A--IN,B--OUT
+    OUT DX, AL     
+ 
+MI:
+	MOV DX,B0809
+    MOV AL,01H
+    OUT DX,AL      ;启动1通道
+	
+    MOV DX, A0809   ;启动A/D采样
+    OUT DX, AL
+ 
+    CALL DELAY
+    IN AL, DX      ;读A/D采样结果
+ 
+    MOV DX, B8255
+    OUT DX,AL      ;送入8255B口
+    JMP MI
+ 
+DELAY:             
+    PUSH CX        
+    PUSH AX
+    MOV CX,0FFFFH;
+L1: LOOP L1    
+    POP AX
+    POP CX 
+    RET
+ 
+CODE ENDS 
+    END START
