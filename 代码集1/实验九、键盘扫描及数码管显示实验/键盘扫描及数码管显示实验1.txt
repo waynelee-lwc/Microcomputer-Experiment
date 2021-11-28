@@ -62,7 +62,8 @@ START:
     MOV AL,00H      
     OUT DX,AL          ;让所有灯熄灭
          
-X1: MOV DX,ROWOUT   ;设置行输出端口
+X1: 	;检验是否有按键按下
+    MOV DX,ROWOUT   ;设置行输出端口
     MOV AL,00H
     OUT DX,AL       ;行输出0000，准备检查是否有任何键按下
     INC DX          ;设置列输入端口地址ROWOUT+1
@@ -80,9 +81,13 @@ X1: MOV DX,ROWOUT   ;设置行输出端口
     CMP AL,0FH
     JZ X1           ;此时，说明延时消抖前的按键判断是源于干扰
                     ;或者，延时消抖时间不足，重新查询
+
+
     MOV AH,11111110B ;设置行扫描初值，首先扫描第0行
     MOV CX,4        ;设置行扫描初值，共4行
-X2: MOV DX,ROWOUT   ;设置行输出端口地址
+
+X2: 	;扫描键盘，获取具体按键
+    MOV DX,ROWOUT   ;设置行输出端口地址
     MOV AL,AH       ;传递行扫描值
     OUT DX,AL       ;行扫描值输出,准备检查在哪一列
     INC DX          
@@ -92,17 +97,21 @@ X2: MOV DX,ROWOUT   ;设置行输出端口地址
     JNZ X3          ;找到按键所在的列号，转X3
     ROL AH,1
     LOOP X2
-    MOV AX,80H     ;4行全部扫描完，却未发现有键安喜爱（可
+    MOV AX,80H     ;4行全部扫描完，却未发现有键按下（可
                    ;能出现了干扰），以80H作为这种情况的标志
                    ;该指令的设置，主要考虑到程序的完备性，
                    ;即可以使程序在任何情况下都能正确执行
     JMP XEND
-X3: MOV CL,4
+
+X3: 	;计算按键值
+    MOV CL,4
     SHL AH,CL      ;AH逻辑左移4位，将低4位的行号移到高4位
     OR  AL,AH      ;行号与列号'或',形成键的位置码
     LEA BX,TABLE   ;设置TABLE位置码表的指针
     MOV CL,0       ;设置键号初值为0
-X4: CMP AL,[BX]    ;在TABLE中查找本次形成的键位置码
+
+X4: 
+    CMP AL,[BX]    ;在TABLE中查找本次形成的键位置码
     JZ X5          ;找到则转X5,对应键号就在CL中
     INC CL
     INC BX
@@ -112,7 +121,9 @@ X4: CMP AL,[BX]    ;在TABLE中查找本次形成的键位置码
                    ;对应的键位置吗，其原因可能是出现了重建
                    ;的情况，以0FFH作为这种情况的标志
     JMP XEND
-X5: MOV AH,CL      ;将CL中保存的键号传到AH中
+
+X5: 
+    MOV AH,CL      ;将CL中保存的键号传到AH中
     CALL LMOVESHOW
     CALL RESET
     MOV DX,A8255_A
@@ -129,7 +140,9 @@ LMOVESHOW:         ;将数码管上每个显示灯上的段码移到其左边的
     MOV CX,5
     MOV POS1,11111101B   ;将显示灯位码放入POS1中
     MOV POS2,11111110B   ;将上面显示灯左边的位码放入POS2中 
-X7: CALL RESET
+
+X7: 
+    CALL RESET
     MOV DX,A8255_A     
     MOV AL,POS1
     OUT DX,AL           ;选中位码为POS1的显示灯
@@ -163,7 +176,8 @@ RESET:       ;保持显示灯状态
 
 XEND:
     NOP
-    RET                                                    
+    RET                      
+                              
 D20ms:
     PUSH CX
     MOV CX,0FH
@@ -171,5 +185,6 @@ X:  LOOP X
     POP CX
     RET  
 KEY ENDP
+
 CODE ENDS
     END START

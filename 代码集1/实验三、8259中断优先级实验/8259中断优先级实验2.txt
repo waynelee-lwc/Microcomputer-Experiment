@@ -1,20 +1,20 @@
 DATA SEGMENT 
-    SIGN DB 00H    ;通过在中断中改变该变量的值控制移动方向
+    SIGN DB 00H    
 DATA ENDS
 CODE SEGMENT 
     ASSUME CS:CODE,DS:DATA
 START: 
     MOV AX, 0000H
-    MOV DS, AX           ;设置数据段地址
+    MOV DS, AX          
  
     MOV DX, 0646H
     MOV AL, 90H
-    OUT DX, AL        ;将方式字传入8255的控制口
+    OUT DX, AL       
     MOV DX, 0642H       
     MOV AL,80H        ;初始状态让D7亮，其它灭
-    OUT DX,AL         ;B口输出80H,即点亮D7灯
+    OUT DX,AL         
     
-	;设置中断向量
+    ;中断向量
     MOV AX, OFFSET MIR6
     MOV SI, 0038H      
     MOV [SI], AX       
@@ -28,7 +28,7 @@ START:
     MOV SI, 003EH
     MOV [SI], AX
  
-    CLI               ;关中断
+    CLI             
     MOV AL, 11H
     OUT 20H, AL
     MOV AL, 08H
@@ -39,25 +39,25 @@ START:
     OUT 21H, AL
     MOV AL, 2FH
     OUT 21H, AL
-    STI                ;开中断
+    STI               
  
 MI:
-	CMP SIGN,00H
-	JZ MI
-    CMP SIGN,02H      ;判断SIGN是否为2
-    JE AA2			  ;若是则跳到AA2
+    CMP SIGN,00H
+    JZ MI
+    CMP SIGN,02H      
+    JE AA2			  
 AA1: 
     MOV DX, 0642H
-    IN AL,DX          ;读B口
-    CMP AL,01H        ;判断灯是否到达最右端
-    JE AAA1             ;如果是则直接回到MI判断SIGN，如果SIGN不变则灯的状态不变
-    ROR AL,1          ;否则指示灯右移
-    CALL DELAY        ;延时
+    IN AL,DX          
+    CMP AL,01H        
+    JE AAA1            
+    ROR AL,1          
+    CALL DELAY       
     CALL DELAY
     CALL DELAY
     CALL DELAY
-    OUT DX,AL         ;B口输出
-    JMP MI            ;回到MI继续判断SIGN
+    OUT DX,AL         
+    JMP MI           
 AAA1:
 	MOV SIGN,00H
 	JMP MI 
@@ -65,27 +65,27 @@ AAA1:
 AA2: 
     MOV DX, 0642H
     IN AL,DX
-    CMP AL,80H       ;判断灯是否到达最左端
-    JE AAA2            ;如果是则直接回到MI判断SIGN，如果SIGN不变则灯的状态不变
-    ROL AL,1         ;否则指示灯左移
-    CALL DELAY       ;延时
+    CMP AL,80H       
+    JE AAA2            
+    ROL AL,1        
+    CALL DELAY      
     CALL DELAY
     CALL DELAY
     CALL DELAY
-    OUT DX,AL        ;B口输出
-    JMP MI           ;回到MI继续判断SIGN
+    OUT DX,AL       
+    JMP MI          
 AAA2:
-	MOV SIGN,00H
-	JMP MI
+    MOV SIGN,00H
+    JMP MI
  
 MIR6:
-    STI              ;开中断
-    MOV SIGN,01H     ;SIGN赋为0
+    STI              
+    MOV SIGN,01H     
     IRET
  
 MIR7:  
-    STI              ;开中断
-    MOV SIGN,02H     ;SIGN赋为1
+    STI             
+    MOV SIGN,02H    
     IRET
 
 ;延时子程序
