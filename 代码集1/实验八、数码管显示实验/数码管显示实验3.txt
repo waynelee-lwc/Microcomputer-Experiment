@@ -1,0 +1,81 @@
+A8255_CON EQU 0606H
+A8255_A EQU 0600H
+A8255_B EQU 0602H
+A8255_C EQU 0604H
+ 
+DATA SEGMENT
+    STUID   DB 4FH    ;3  
+            DB 07H    ;7
+            DB 5BH    ;2
+            DB 4FH    ;3 
+            DB 3FH    ;0
+            DB 06H    ;1
+    bitchoose  DB 11111110B  ;位选码
+    comparevar DB 00000001B  ;用于比较  
+    NUM DB 0   ;对应的序号
+DATA ENDS 
+
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,DATA
+    MOV DS,AX   
+    
+    MOV DX,A8255_CON
+    MOV AL,10000001B  ;A,B均工作在方式0，A口输出，C口高4位输出，B口输出,C口低4位输出
+    OUT DX,AL 
+    LEA SI,STUID
+    
+MAIN:  
+    MOV DX,A8255_C
+    IN AL,DX                    ;读C口，判断开关状态
+    MOV bitchoose,11111110B     ;恢复初始状态 
+    MOV comparevar,00000001B
+    MOV NUM,0
+    CALL GETSERIALNUM
+    JMP MAIN    
+    
+GETSERIALNUM:        ;判断高电平位置   
+    PUSH CX     
+    MOV CX,6
+GET2:      
+    PUSH AX
+    AND AL,comparevar
+    JNZ GET1
+    JMP GET3
+GET1:
+    CALL SHOWLED 
+GET3: 
+    ROL comparevar,1
+    ROL bitchoose,1 
+    INC NUM 
+    POP AX
+    LOOP GET2        
+    POP CX
+    RET
+
+SHOWLED: 
+    PUSH AX
+    PUSH DX
+    MOV DX,A8255_A
+    MOV AL,bitchoose
+    OUT DX,AL
+    MOV DX,A8255_B
+    MOV AL,[NUM+SI] 
+    OUT DX,AL  
+    MOV DX,A8255_A
+    MOV AL,00H
+    OUT DX,AL     ;选中所有位选码
+    POP DX
+    POP AX
+    RET
+    
+DELAY:
+    PUSH CX
+    MOV CX,00FH
+X4:
+    LOOP X4
+    POP CX
+    RET
+CODE ENDS
+     END START
