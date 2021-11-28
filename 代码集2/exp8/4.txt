@@ -1,0 +1,114 @@
+;该份代码比较冗余，请自行删掉不必要的或者进行相应更改
+data segment
+table1:
+	db 3fh;0
+	db 06h;1
+	db 5bh;2
+	db 4fh;3
+	db 66h;4
+	db 6dh;5
+	db 7dh;6
+	db 07h;7
+	db 7fh;8
+	db 6fh;9
+data ends
+
+code segment
+	assume cs:code, ds:data
+start:
+	mov ax,data
+	mov ds,ax
+	
+    MOV AX, OFFSET MIR6
+    MOV SI, 0038H
+    MOV [ES:SI], AX
+    MOV AX, CS
+    MOV SI, 003AH
+    MOV [ES:SI], AX
+	
+    CLI
+    MOV AL, 11H
+    OUT 20H, AL
+    MOV AL, 08H
+    OUT 21H, AL
+    MOV AL, 04H
+    OUT 21H, AL
+    MOV AL, 03H
+    OUT 21H, AL
+    MOV AL, 3FH
+    OUT 21H, AL
+    STI
+    
+	MOV DX, 0646H;8254
+    MOV AL, 76H  ;01110110B
+    OUT DX, AL 
+    MOV DX, 0642H 
+    MOV AL, 00H
+    OUT DX, AL
+    MOV AL, 48H  ;
+    OUT DX, AL
+	
+	lea si,table1
+	mov dx,0606h
+	mov al,89h ;10001001B  A,B口输出，C口输入
+	out dx,al
+	mov dx,0602h
+	mov al,3fh
+	out dx,al
+	mov dx,0600h
+	mov al,00h
+	out dx,al
+	
+	mov ah,11111110b	
+begin:	
+    mov cx,0ah
+	mov bx,0001h
+aa1:
+	push cx
+	mov cx,03h
+    mov al,ah
+aa2:
+	call light
+	rol al,1
+	cmp al,10111111b
+	jnz b11
+	mov al,11111110b
+	b11:
+	inc bx
+	loop aa2
+	
+	pop cx
+	mov bx,0001h    ;恢复bx的值
+	loop aa1
+	jmp begin
+
+	
+light:
+	;al:position
+	;bx:content
+	mov dx,0600h
+	out dx,al
+	push ax
+	mov al,[bx+si]
+	mov dx,0602h
+	out dx,al
+	pop ax
+	call delay
+	ret
+	
+MIR6:
+	rol ah,1
+	cmp ah,10111111b
+	jnz endi
+	mov ah,11111110b
+	endi:
+	iret
+	
+delay:
+	push cx
+	mov cx,0a00h
+	lop:loop lop
+	pop cx
+	ret
+code ends
+	end start

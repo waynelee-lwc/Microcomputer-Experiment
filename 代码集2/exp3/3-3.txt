@@ -1,0 +1,130 @@
+DATA SEGMENT
+    SIGN DB 00H  
+DATA ENDS
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,0000H        
+    MOV DS,AX         
+    
+    MOV DX,0646H 
+    MOV AL,90H         
+    OUT DX,AL  
+    
+
+    MOV AX,OFFSET MIR6
+    MOV SI,0038H
+    MOV [SI],AX
+    MOV AX,CS
+    MOV SI,003AH
+    MOV [SI],AX
+
+    MOV AX,OFFSET MIR7
+    MOV SI,003CH
+    MOV [SI],AX
+    MOV AX,CS
+    MOV SI,003EH
+    MOV [SI],AX
+    
+    CLI 
+
+    MOV AL, 11H     
+    OUT 20H, AL
+    MOV AL, 08H
+    OUT 21H, AL
+    MOV AL, 04H
+    OUT 21H, AL
+    MOV AL, 07H
+    OUT 21H, AL
+    MOV AL, 2FH
+    OUT 21H, AL
+    STI 
+      
+    MOV DX, 0642H
+    MOV AL, 080H
+	OUT DX, AL
+
+AA0:MOV DX, 0642H
+	OUT DX, AL 
+	MOV SIGN,00H
+    JMP AA0
+
+MIR6:        ;KK1 
+    CMP SIGN,00H
+    JNE AA3
+    MOV SIGN,01H
+AA3:    
+    CMP SIGN,02H
+    JNE AA1     
+    ;CMP SIGN,00H
+    MOV SIGN,03H
+AA1:           
+    CMP AL,01H
+    JE AA4 
+    SHR AL,1 
+    MOV DX,0642H
+    OUT DX, AL 
+    CALL DELAY  
+    CALL DELAY
+    CALL DELAY
+    CALL DELAY 
+    JMP AA1
+AA4:
+	CMP SIGN,03H
+	JNE AA2
+    MOV SIGN,02H
+AA2:
+    CMP SIGN,01H
+    JNE AA5
+    JMP AA0 
+AA5:
+    CMP SIGN,02H
+    JNE AA6          ; HIDARI HE
+    JMP BB1  
+AA6:
+    CMP SIGN,04H
+    JNE AA7         ; HIDARI HE
+    MOV SIGN,02H
+    JMP BB1
+AA7:
+    JMP AA0
+	
+MIR7:            ;KK2 
+    CMP SIGN,00H
+    JNE BB1
+    MOV SIGN,02H
+BB1:    
+    CMP SIGN,01H
+    JNE BB3
+    MOV SIGN,04H
+    JMP AA1           ;ATODE SURU
+BB3:
+    CMP SIGN,03H
+    JNE BB0
+    JMP AA1
+
+BB0:    
+    MOV SIGN,02H         
+    CMP AL,080H
+    JE BB2 
+    SHL AL,1   
+    MOV DX,0642H    
+    OUT DX,AL 
+    CALL DELAY    
+    CALL DELAY
+    CALL DELAY
+    CALL DELAY  
+    JMP BB0
+BB2:
+    MOV SIGN,00H
+    JMP AA0
+	
+
+DELAY PROC NEAR  
+	MOV CX,0FFFFH
+	LOOP $
+	RET
+DELAY ENDP 
+ 
+CODE ENDS
+    END START

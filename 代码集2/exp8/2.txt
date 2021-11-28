@@ -1,0 +1,70 @@
+A8255 EQU 0600H
+B8255 EQU 0602H
+C8255 EQU 0604H  
+CON8255 EQU 0606H
+
+DATA SEGMENT
+    TABLE1:   ;段码表
+        DB 06H    ;1
+        DB 5BH    ;2
+        DB 4FH    ;3
+        DB 66H    ;4
+        DB 6DH    ;5
+        DB 7DH    ;6  
+    POS:                ;位码表
+        DB 11111110B    
+        DB 11111101B
+        DB 11111011B
+        DB 11110111B
+        DB 11101111B
+        DB 11011111B        
+DATA ENDS
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,DATA
+    MOV DS,AX   
+        
+    MOV DX,CON8255
+    MOV AL,81H     ;A,B--OUT,LOW 4 BITS OF C--IN
+    OUT DX,AL    
+    
+    MOV DX,A8255
+    MOV AL,00H       ;选择所有数码管
+    OUT DX,AL
+    MOV DX,B8255
+    MOV AL,00H      ;给所有数码管送段码00H，即让所有数码管熄灭
+    OUT DX,AL
+    
+    LEA BX,TABLE1    ;TABLE1的偏移地址送BX 
+    LEA CX,POS       ;POS的偏移地址送CX
+    MOV SI,0         ;TABLE1和POS的相对偏移地址送SI，初始为0    
+MAIN:  
+    MOV DX,A8255
+    MOV AL,[BX+SI]
+    OUT DX,AL
+    MOV DX,B8255 
+    PUSH BX  
+    MOV BX,CX
+    MOV AL,[BX+SI]  
+    POP BX
+    OUT DX,AL
+    CALL DELAY
+    INC SI
+    CMP SI,6
+    JZ X1
+    JMP MAIN
+X1:
+    MOV SI,0    
+    JMP MAIN     
+    
+DELAY:
+    PUSH CX
+    MOV CX,0FFH
+X4: PUSH AX
+    POP AX
+    LOOP X4
+    POP CX
+    RET
+CODE ENDS
+     END START
