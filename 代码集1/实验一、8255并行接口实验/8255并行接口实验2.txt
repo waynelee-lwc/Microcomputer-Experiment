@@ -1,0 +1,35 @@
+A8255 EQU 0600H
+B8255 EQU 0602H
+C8255 EQU 0604H
+CON8255 EQU 0606H
+
+CODE SEGMENT
+	ASSUME CS:CODE
+START:	
+	MOV DX,CON8255
+	MOV AL,90H    ;A--IN;B--OUT
+	OUT DX,AL
+	
+MAIN:
+	MOV DX,A8255  
+	IN AL,DX      ;Read A
+	CMP AL,0FFH   ;Judge whether all of the bits are high
+	JZ EXIT       ;If so,just quit; 
+	AND AL,01H    ;Let other bits 0 except K0
+	CMP AL,1H
+	JNZ X1
+	MOV AL,0F0H   ;If input is 1,let high 4 bits light up
+	JMP OUTPUT
+X1:
+	MOV AL,0FH    ;or let low 4 bits light up
+OUTPUT:
+	MOV DX,B8255
+	OUT DX,AL			
+	JMP MAIN	
+	
+EXIT:             ;quit
+	MOV AH,4CH
+	INT 21H
+	
+CODE ENDS
+	END START
