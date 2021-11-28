@@ -1,0 +1,87 @@
+DATA SEGMENT
+    SIGN DB 00H  
+DATA ENDS
+CODE SEGMENT
+    ASSUME CS:CODE,DS:DATA
+START:
+    MOV AX,0000H        
+    MOV DS,AX           ;设置数据段地址
+    
+    MOV DX,0646H 
+    MOV AL,90H         
+    OUT DX,AL       ;初始化方式字，A口读入，B口输出
+    
+	;设置中断向量
+    MOV AX,OFFSET MIR6
+    MOV SI,0038H
+    MOV [SI],AX
+    MOV AX,CS
+    MOV SI,003AH
+    MOV [SI],AX
+
+    MOV AX,OFFSET MIR7
+    MOV SI,003CH
+    MOV [SI],AX
+    MOV AX,CS
+    MOV SI,003EH
+    MOV [SI],AX
+    
+    CLI  ;关中断
+	;设置ICW1~ICW4和OCW1
+    MOV AL, 11H     
+    OUT 20H, AL
+    MOV AL, 08H
+    OUT 21H, AL
+    MOV AL, 04H
+    OUT 21H, AL
+    MOV AL, 07H
+    OUT 21H, AL
+    MOV AL, 2FH
+    OUT 21H, AL
+    STI  ;关中断
+    
+AA1:         ;主程序，让红灯绿灯全亮
+    MOV DX, 0642H
+    MOV AL, 0FFH
+	OUT DX, AL
+	JMP AA1
+MIR6:
+    MOV DX,0642H
+	MOV AL, 0FH    
+    OUT DX, AL    ;亮绿灯
+    CALL DELAY    ;延时
+    CALL DELAY
+    CALL DELAY
+    CALL DELAY
+	CMP SIGN,01H  ;判断SIGN是否为1
+	JZ RED        ;若为1则跳到RED
+	JMP BACK      ;否则直接中断返回
+RED: ;当发生嵌套中断时，高优先级中断结束后回复到低优先级中断状态，即绿灯亮完后红灯亮
+	MOV DX, 0642H
+    MOV AL, 0F0H    ;亮红灯
+    OUT DX, AL
+BACK:
+	IRET
+	
+MIR7:
+	STI
+	MOV SIGN,01H   ;SIGN置1，表示此时发生了MIR7中断
+    MOV DX,0642H
+    MOV AL,0F0H    
+    OUT DX,AL      ;亮红灯
+    CALL DELAY     ;延时
+    CALL DELAY
+    CALL DELAY
+    CALL DELAY
+	MOV SIGN,00H   ;执行完恢复标志位为0 
+	IRET
+	
+;延时子程序
+DELAY PROC NEAR  
+	MOV CX,0FFFFH
+	LOOP $
+	RET
+DELAY ENDP 
+ 
+CODE ENDS
+    END START
