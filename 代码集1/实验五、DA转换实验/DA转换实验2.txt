@@ -1,0 +1,165 @@
+DATA SEGMENT
+    SIGN DB 00H  
+DATA ENDS
+
+CODE SEGMENT
+    ASSUME  CS:CODE,DS:DATA
+  
+START:
+	MOV AX,0000H        
+    MOV DS,AX           ;设置数据段地址
+      
+    ;设置中断向量
+    MOV AX,OFFSET MIR7
+    MOV SI,003CH
+    MOV [SI],AX
+    MOV AX,CS
+    MOV SI,003EH
+    MOV [SI],AX
+    
+    CLI  ;关中断
+	;设置ICW1~ICW4和OCW1
+    MOV AL, 11H     
+    OUT 20H, AL
+    MOV AL, 08H
+    OUT 21H, AL
+    MOV AL, 04H
+    OUT 21H, AL
+    MOV AL, 07H
+    OUT 21H, AL
+    MOV AL, 2FH
+    OUT 21H, AL
+    STI  ;关中断
+    
+MAIN:
+	CMP SIGN,00H
+	JE JUCHI
+	CMP SIGN,01H
+	JE JUXING
+	CMP SIGN,02H
+	JE SANJIAO
+	CMP SIGN,03H
+	JE JIETI0
+	JMP MAIN
+    ;产生锯齿波
+    
+    
+    MOV CX,05H
+JUCHI:
+	CMP SIGN,0H
+    JNE MAIN
+    MOV DX, 0600H     ;DAC0832接IOY0,0600H为控制端口地址
+    MOV AL, 00H       ;AL为数字量
+JC1: 
+    OUT DX, AL        ;转换为模拟量
+    CALL DELAY1       ;延时，此为短延时
+    CMP AL ,0FFH
+    JE JC2              
+    
+    INC AL            ;AL步加1，直到等于0FFH
+    JMP JC1
+JC2:
+    LOOP JUCHI
+
+
+;产生矩形波
+    MOV CX, 05H       ;产生矩形波的周期数为5次，如果想改变三角波产生周期请修改这里
+JUXING:
+	CMP SIGN,01H
+    JNE MAIN
+    MOV DX, 0600H
+    MOV AL, 00H       ;先输出00H的波形
+    OUT DX, AL
+    CALL DELAY2       ;长延时
+    MOV AL, 0FFH      ;再输出0FFH的波形
+    OUT DX, AL
+    CALL DELAY2       ;长延时  
+    LOOP JUXING
+
+ZHONGJIAN:JMP MAIN
+
+    ;产生三角波
+    MOV CX, 05H     ;产生三角波的周期数为5次，如果想改变三角波产生周期请修改这里
+SANJIAO:
+SJ1:
+	CMP SIGN,02H
+    JNE MAIN
+    MOV DX, 0600H
+    OUT DX, AL
+    
+    CALL DELAY1       ;短延时
+    CMP AL,0FFH
+    JE SJ2           
+    INC AL            ;将AL从00H步加0FFH
+    JMP SJ1
+SJ2:
+    MOV DX, 0600H
+    OUT DX, AL
+    CALL DELAY1       ;短延时
+    CMP AL,00H
+    JE SJ3     
+    DEC AL            ;将AL从0FFH步减至00H
+    JMP SJ2
+SJ3:
+    LOOP SANJIAO
+  
+    ;产生阶梯波
+JIETI0:
+    MOV CX, 05H     ;产生阶梯波的周期数为0FFFF次，如果想改变阶梯波产生周期请修改这里
+    MOV AX, 0FEH       
+    ;波形振幅最大值为0FFH
+    ;考虑到8086的DIV除法可能会出现余数为负导致加起来之后的最大值大于0FFH，故使用0FEH作最大值
+    MOV BL,05H         ;阶梯波中的阶梯数，如果想改变阶梯波中的阶梯数请修改这里
+    DIV BL             ;用最大振幅除以阶梯数，得到每个台阶的高度
+    MOV BL, AL         ;将上述除法的商保存在BL中
+    MOV BH, 00H        ;BH置0
+JIETI1:
+	CMP SIGN,03H
+    JNE ZHONGJIAN
+    MOV AX,0000H       ;AX初始化0000H
+JT1:
+    MOV DX, 0600H
+    OUT DX, AL
+    CMP AX, 00FFH      ;判断AX是否达到幅度上线
+    JAE JT2            ;达到上限，表示一次阶梯波完整生成，开始新一次生成
+    CALL DELAY2        ;长延时
+    
+    ADD AX, BX         ;用当前解体高度加上每个阶梯的高度得到下一阶梯的高度
+    JMP JT1
+JT2:    
+    LOOP JIETI1
+MIR7:
+	PUSH AX
+   	CMP SIGN,03H
+   	JE SET0
+   	INC SIGN
+   	JMP QUIT
+SET0:
+	MOV SIGN,0H
+QUIT:
+	POP AX
+	IRET
+
+
+DELAY1:                ;短延时
+    PUSH CX
+    MOV CX, 01FFH
+D1: 
+    PUSH AX
+    POP AX
+    LOOP D1
+    POP CX
+    RET
+
+DELAY2:               ;长延时
+    PUSH CX
+    MOV CX, 0FFFFH
+D2: 
+    PUSH AX
+    POP AX
+    LOOP D2
+    POP CX
+    RET
+
+CODE ENDS
+    END START
